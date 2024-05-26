@@ -1,1 +1,2 @@
-# FengBao-Discord-Bot
+# 風暴機器人
+> 開源中文機器人
