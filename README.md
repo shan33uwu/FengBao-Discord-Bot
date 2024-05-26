@@ -22,4 +22,4 @@
 
 **使用前，請開啟 requirements-install.cmd 以安裝必要函式庫**
 
-**Powered by WEIWEI**
+**Powered by weiwei_hacking**
