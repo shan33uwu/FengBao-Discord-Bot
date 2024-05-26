@@ -1,0 +1,5 @@
+discord
+discordutils
+datetime
+psutil
+asyncio
