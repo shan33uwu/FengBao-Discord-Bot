@@ -5,14 +5,14 @@ title 必要函式庫安裝中請稍後...
 
 cls
 
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
 echo      :::     ::::::::::. :::::::..    :::.    :::::::..   :::.,::::::                                    
 echo       ;;;     ;;; ;;;'';;';;;;``;;;;   ;;`;;   ;;;;``;;;;  ;;;;;;;''''                                    
 echo       [[[     [[[ [[[__[[\.[[[,/[[['  ,[[ '[[,  [[[,/[[['  [[[ [[cccc                                     
@@ -25,27 +25,27 @@ echo      [[[  [[[[[. '[['[==/[[[[,    [[    ,[[ '[[,   [[[          `[[     [[,
 echo      $$$  $$$ "Y$c$$  '''    $    $$   c$$$cc$$$c  $$'           $$,    $$$$$,     $$$$$$ "Y$c$$ $$""""   
 echo      888  888    Y88 88b    dP    88,   888   888,o88oo,.__      888_,o8P'"888,_ _,88P888    Y88 888oo,__ 
 echo      MMM  MMM     YM  "YMmMY"     MMM   YMM   ""` """"YUMMM      MMMMP"`    "YMMMMMP" MMM     YM """"YUMMM
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
 
 pip install -r requirements.txt
 
 cls
 
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
 echo       :::     ::::::::::. :::::::..    :::.    :::::::..   :::.,::::::                                    
 echo       ;;;     ;;; ;;;'';;';;;;``;;;;   ;;`;;   ;;;;``;;;;  ;;;;;;;''''                                    
 echo       [[[     [[[ [[[__[[\.[[[,/[[['  ,[[ '[[,  [[[,/[[['  [[[ [[cccc                                     
@@ -58,12 +58,12 @@ echo      [[[  [[[[[. '[['[==/[[[[,    [[    ,[[ '[[,   [[[          `[[     [[,
 echo      $$$  $$$ "Y$c$$  '''    $    $$   c$$$cc$$$c  $$'           $$,    $$$$$,     $$$$$$ "Y$c$$ $$""""   
 echo      888  888    Y88 88b    dP    88,   888   888,o88oo,.__      888_,o8P'"888,_ _,88P888    Y88 888oo,__ 
 echo      MMM  MMM     YM  "YMmMY"     MMM   YMM   ""` """"YUMMM      MMMMP"`    "YMMMMMP" MMM     YM """"YUMMM
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
-echo  
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
+echo ㅤ 
 pause
