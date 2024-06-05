@@ -7,14 +7,9 @@ from discord.utils import format_dt
 import datetime
 import psutil
 import asyncio
+import json
 
-
-intents = discord.Intents.default()
-intents.voice_states = True
-intents.typing = False
-intents.presences = False
-intents.message_content = True
-intents.members = False
+intents = discord.Intents.all()
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
@@ -23,6 +18,7 @@ tree = app_commands.CommandTree(client)
 async def on_ready():
     await tree.sync()
     print(f"目前登入身份 --> {client.user.name}")
+    await load_all_members()
     await update_status.start()
 
 @tasks.loop(seconds=15)
@@ -33,6 +29,97 @@ async def update_status():
 
     status = f"{len(client.guilds)} 個伺服器  |  總人數 {total_members}"
     await client.change_presence(activity=discord.Game(name=status))
+
+# 載入設定檔案
+def ensure_settings():
+    try:
+        with open('settings.json', 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+    except FileNotFoundError:
+        settings = {"voice": []}
+    except json.JSONDecodeError:
+        # 如果檔案格式錯誤，我們就重新創建它
+        settings = {"voice": []}
+
+    # 確保 settings 是一個字典，且包含 "voice" 鍵
+    if not isinstance(settings, dict):
+        settings = {"voice": []}
+    elif "voice" not in settings:
+        settings["voice"] = []
+    elif not isinstance(settings["voice"], list):
+        # 如果 "voice" 的值不是列表，我們就重置它
+        settings["voice"] = []
+
+    # 保存更新後的設定，以修復任何問題
+    save_settings(settings)
+    return settings
+
+def save_settings(settings):
+    with open('settings.json', 'w', encoding='utf-8') as f:
+        json.dump(settings, f, ensure_ascii=False, indent=4)
+
+def update_server_state(guild_id, state):
+    try:
+        with open('server_states.json', 'r', encoding='utf-8') as f:
+            states = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        states = {}
+
+    states[guild_id] = state
+    with open('server_states.json', 'w', encoding='utf-8') as f:
+        json.dump(states, f, ensure_ascii=False, indent=4)
+
+async def load_all_members():
+    for guild in client.guilds:
+        async for member in guild.fetch_members(limit=None):
+            pass
+
+
+@tree.command(name="語音通知", description="🛠️ ▏開啟或關閉伺服器的語音通知功能")
+@app_commands.describe(action="選擇開啟或關閉")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.choices(action=[
+    app_commands.Choice(name="開啟", value="on"),
+    app_commands.Choice(name="關閉", value="off")
+])
+async def voice_notification(interaction: discord.Interaction, action: app_commands.Choice[str]):
+    try:
+        guild_id = str(interaction.guild_id)
+        settings = ensure_settings()
+
+        # 根據動作添加或移除伺服器 ID
+        if action.value == "on":
+            if guild_id not in settings["voice"]:
+                settings["voice"].append(guild_id)
+                save_settings(settings)
+                await interaction.response.send_message(
+                    f"✅ 語音通知功能已開啟！\n\n"
+                    f"你可以隨時使用 `/語音通知` 指令來切換此功能的狀態。\n"
+                    f"目前狀態：開啟 ✅"
+                )
+            else:
+                await interaction.response.send_message("❕ 語音通知功能已經是開啟狀態。")
+        else:  # off
+            if guild_id in settings["voice"]:
+                settings["voice"].remove(guild_id)
+                save_settings(settings)
+                await interaction.response.send_message(
+                    f"❎ 語音通知功能已關閉！\n\n"
+                    f"你可以隨時使用 `/語音通知` 指令來切換此功能的狀態。\n"
+                    f"目前狀態：關閉 ❎"
+                )
+            else:
+                await interaction.response.send_message("❕ 語音通知功能已經是關閉狀態。")
+
+        # 更新伺服器狀態
+        update_server_state(guild_id, action.value)
+
+    except Exception as e:
+        print(f"❌ 在處理語音通知指令時發生錯誤：{str(e)}")
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"❌ 發生錯誤：{str(e)}")
+        else:
+            await interaction.followup.send(f"❌ 發生錯誤：{str(e)}")
 
 @client.event
 async def on_message(message):
@@ -66,43 +153,83 @@ async def on_message(message):
 
 @client.event
 async def on_voice_state_update(member, before, after):
-    if before.channel is None and after.channel is not None:  # 加入語音頻道
-        timestamp = int(datetime.datetime.now().timestamp())
-        channel = after.channel
-        voice_channel_id = after.channel.id
-        embed = discord.Embed(title="", description="", color=0x26FF2A)
-        embed.add_field(name=':inbox_tray: 加入了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：{after.channel.mention}`（{voice_channel_id}）`')
-        await channel.send(embed=embed)
-    elif before.channel is not None and after.channel is None:  # 離開語音頻道
-        timestamp = int(datetime.datetime.now().timestamp())
-        channel = before.channel
-        voice_channel_id = before.channel.id
-        embed = discord.Embed(title="", description="", color=0xFF0404)
-        embed.add_field(name=':outbox_tray: 離開了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：{before.channel.mention}`（{voice_channel_id}）`')
-        await channel.send(embed=embed)
-    elif before.channel is not None and after.channel is not None and before.channel != after.channel:  # 切換語音頻道
-        timestamp = int(datetime.datetime.now().timestamp())
-        before_channel = before.channel
-        after_channel = after.channel
-        after_voice_channel_id = after.channel.id
-        before_voice_channel_id = before.channel.id
-        embed = discord.Embed(title="", description="", color=0x00bbff)
-        embed.add_field(name=':outbox_tray: 切換了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：{before.channel.mention}`（{before_voice_channel_id}）` \n已到：{after.channel.mention}`（{after_voice_channel_id}）`')
-        await before_channel.send(embed=embed)
-        embed = discord.Embed(title="", description="", color=0x00bbff)
-        embed.add_field(name=':inbox_tray: 切換了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：{after.channel.mention}`（{after_voice_channel_id}）` \n已從：{before.channel.mention}`（{before_voice_channel_id}）`')
-        await after_channel.send(embed=embed)
+    try:
+        settings = ensure_settings()
+        guild_id = str(member.guild.id)
+
+        if "voice" not in settings or guild_id not in settings["voice"]:
+            return  # 如果伺服器不在列表中，就不做任何事
+
+        state = get_server_state(guild_id)
+        if state == "off":
+            return  # 如果功能被關閉，就不做任何事
+
+        if before.channel is None and after.channel is not None:  # 加入語音頻道
+            timestamp = int(datetime.datetime.now().timestamp())
+            channel = after.channel
+            voice_channel_id = after.channel.id
+            embed = discord.Embed(title="", description="", color=0x26FF2A)
+            embed.add_field(name=':inbox_tray: 加入了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：<#{voice_channel_id}>`（{voice_channel_id}）`')
+            await channel.send(embed=embed)
+        elif before.channel is not None and after.channel is None:  # 離開語音頻道
+            timestamp = int(datetime.datetime.now().timestamp())
+            channel = before.channel
+            voice_channel_id = before.channel.id
+            embed = discord.Embed(title="", description="", color=0xFF0404)
+            embed.add_field(name=':outbox_tray: 離開了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：<#{voice_channel_id}>`（{voice_channel_id}）`')
+            await channel.send(embed=embed)
+        elif before.channel is not None and after.channel is not None and before.channel != after.channel:  # 切換語音頻道
+            timestamp = int(datetime.datetime.now().timestamp())
+            before_channel = before.channel
+            after_channel = after.channel
+            after_voice_channel_id = after.channel.id
+            before_voice_channel_id = before.channel.id
+            embed = discord.Embed(title="", description="", color=0x00bbff)
+            embed.add_field(name=':outbox_tray: 切換了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：<#{before_voice_channel_id}>`（{before_voice_channel_id}）` \n已到：<#{after_voice_channel_id}>`（{after_voice_channel_id}）`')
+            await before_channel.send(embed=embed)
+            embed = discord.Embed(title="", description="", color=0x00bbff)
+            embed.add_field(name=':inbox_tray: 切換了語音頻道', value=f'時間：<t:{timestamp}><t:{timestamp}:R> \n用戶：{member.mention}`（{member.name}）` \n頻道：<#{after_voice_channel_id}>`（{after_voice_channel_id}）` \n已從：<#{before_voice_channel_id}>`（{before_voice_channel_id}）`')
+            await after_channel.send(embed=embed)
+    except Exception as e:
+        print(f"❌ 在處理語音狀態更新時發生錯誤：{str(e)}")
+
+def get_server_state(guild_id):
+    try:
+        with open('server_states.json', 'r', encoding='utf-8') as f:
+            states = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        states = {}
+
+    return states.get(guild_id, "on")  # 如果沒有設定，預設為 "on"
+
+
+
 
 @tree.command(name="幫助", description="顯示該機器人的幫助介面")
 async def help_command(ctx):
     embed = discord.Embed(title="風暴機器人幫助介面", description="需要幫助嗎? 加入我們的 [Discord](https://discord.gg/daFQhVFGKj) 並開啟一個票單來與客服人員對談。", color=0x00bbff)
-    embed.add_field(name="機器人說明", value="""本機器人由 weiwei_hacking 與 [claude.ai](https://claude.ai/) 開發並製作完成
-                                                            且本機器人以完全公開開源的方式向公眾發布，你可以加入我們的 [Discord](https://discord.gg/daFQhVFGKj) 來獲取檔案。""", inline=False)
-    embed.add_field(name="機器人指令權限說明", value="""功能指令的說明前面如果含有這個🛠️emoji即代表該指令僅限擁有管理員權限的使用者使用
-                                                                       如果是含有這個👑emoji即代表該指令僅限機器人擁有者使用
-                                                                       如果都沒有都沒有上述兩個emoji的話即代表所有人皆可使用。""", inline=False)
-    embed.add_field(name="指令列表", value="`/幫助\n/用戶查詢\n/頭貼查詢\n/邀請\n/踢出\n/停權\n/解除停權\n/禁言\n/解除禁言\n/鎖定\n/解除鎖定\n/清除頻道\n/重建頻道\n/狀態\n/伺服器資訊`", inline=False)
+    embed.add_field(name="一般的功能", value="""</幫助:1242821433306910921> 顯示這個機器人的指令列表
+                                                        </用戶查詢:1242821433306910929> 查詢使用者的帳號建立日期、加入日期和ID等
+                                                        </頭貼查詢:1242821433306910930> 查詢使用者的頭貼
+                                                        </伺服器資訊:1244212346117689424> 查詢伺服器的創建日期、人數、伺服器ID和擁有者ID等
+                                                        </身分組列表:1244212346117689425> 查詢這個伺服器的所有身分組
+                                                        </狀態:1243215849788145707> 查詢目前機器人的延遲、CPU和RAM使用率、擁有者ID等
+                                                        </邀請:1242821433529339969> 取得這個機器人的邀請連結
+                                                        """, inline=False)
+    embed.add_field(name="管理員的功能", value="""</踢出:1242821433306910922> 踢掉某人
+                                                        </停權:1242821433306910923> 停權某人
+                                                        </禁言:1242821433306910924> 禁言某人
+                                                        </鎖定:1242821433306910927> 禁止打字指定或當下的文字頻道
+                                                        </解除停權:1242821433306910926> 把某人的停權解除，注意這裡必須用用戶ID
+                                                        </解除禁言:1242821433306910925> 把某人的禁言給解除
+                                                        </解除鎖定:1242821433306910928> 把被鎖定的頻道給解除鎖定，讓大家能打字
+                                                        </清除頻道:1242821433529339966> 清除該頻道指定數量的內容
+                                                        </重建頻道:1242821433529339967> 把當下的文字頻道複製一份完整一樣的，然後把舊的刪除
+                                                        """, inline=False)
     await ctx.response.send_message(embed=embed)
+
+
+
 
 @tree.command(name="踢出", description="🛠️ ▏將指定的成員從目前這個伺服器踢出")
 @app_commands.checks.has_permissions(administrator=True)
@@ -274,29 +401,78 @@ async def status(ctx):
     embed.add_field(name="機器人擁有者", value=f"<@{owner_id}> ({owner_id})", inline=True)
     await ctx.response.send_message(embed=embed)
 
+
+def get_verification_level_chinese(level: discord.VerificationLevel) -> str:
+    levels = {
+        discord.VerificationLevel.none: "無",
+        discord.VerificationLevel.low: "低",
+        discord.VerificationLevel.medium: "中",
+        discord.VerificationLevel.high: "高",
+        discord.VerificationLevel.highest: "最高",
+    }
+    level_name = levels.get(level, "未知")
+    return f"{level_name}"
+
+
 @tree.command(name="伺服器資訊", description="顯示此伺服器的相關資訊")
-async def abc(ctx):
-    guild = ctx.guild
+async def abc(interaction: discord.Interaction):
+    guild = interaction.guild
+
+    # 再次嘗試加載所有成員
+    async for member in guild.fetch_members(limit=None):
+        pass
 
     # 獲取人員數量
-    member_count = len(guild.members)
-    bot_count = len([m for m in guild.members if m.bot])
+    member_count = guild.member_count
+
+    # 使用多種方法識別機器人
+    verified_bots = set()
+    unverified_bots = set()
+
+    for member in guild.members:
+        if member.bot:
+            verified_bots.add(member)
+        elif getattr(member.public_flags, 'verified_bot', False):
+            verified_bots.add(member)
+        elif getattr(member, 'application_id', None) is not None:
+            unverified_bots.add(member)
+        elif discord.utils.get(member.roles, name="Bots") is not None:
+            unverified_bots.add(member)
+
+    # 特殊處理：檢查成員的公開標誌
+    for member in guild.members:
+        flags = member.public_flags.value
+        if flags & (1 << 16):  # BOT_HTTP_INTERACTIONS flag
+            if member not in verified_bots and member not in unverified_bots:
+                unverified_bots.add(member)
+
+    verified_bot_count = len(verified_bots)
+    unverified_bot_count = len(unverified_bots)
+    bot_count = verified_bot_count + unverified_bot_count
     human_count = member_count - bot_count
 
-    # 獲取頻道數量
+    # 列出所有機器人的資訊
+    bot_info = "機器人列表:\n"
+    for bot in verified_bots:
+        bot_info += f"✅ {bot.name} (ID: {bot.id})\n"
+    for bot in unverified_bots:
+        bot_info += f"❓ {bot.name} (ID: {bot.id})\n"
+
+    # 其餘的代碼保持不變...
     text_channel_count = len(guild.text_channels)
     voice_channel_count = len(guild.voice_channels)
     total_channel_count = text_channel_count + voice_channel_count
 
-    # 獲取身分組數量
-    role_count = len(guild.roles) - 1  # 減去 @everyone 身分組
+    role_count = len(guild.roles) - 1
     admin_role_count = len([role for role in guild.roles if role.permissions.administrator])
     non_admin_role_count = role_count - admin_role_count
 
-    # 其他伺服器資訊
     created_at = int(guild.created_at.timestamp())
     boost_count = guild.premium_subscription_count
-    verification_level = str(guild.verification_level)
+    
+    # 獲取並轉換驗證等級為中文
+    verification_level = get_verification_level_chinese(guild.verification_level)
+    
     owner_id = guild.owner_id
 
     embed = discord.Embed(title=f"{guild.name} 的伺服器資訊", color=discord.Color.green())
@@ -310,7 +486,8 @@ async def abc(ctx):
     embed.add_field(name="伺服器驗證等級", value=verification_level, inline=True)
     embed.add_field(name="身分組列表", value="請使用  /身分組列表", inline=True)
 
-    await ctx.response.send_message(embed=embed)
+    await interaction.response.send_message(embed=embed)
+
 
 @tree.command(name="身分組列表", description="列出此伺服器的所有身分組")
 async def role_list(ctx):
@@ -320,5 +497,5 @@ async def role_list(ctx):
 
     embed = discord.Embed(title=f"身分組列表", description=role_list_str, color=discord.Color.green())
     await ctx.response.send_message(embed=embed)
-    
+        
 client.run("機器人Token貼這裡")
