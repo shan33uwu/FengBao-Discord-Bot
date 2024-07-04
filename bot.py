@@ -8,6 +8,7 @@ import datetime
 import psutil
 import asyncio
 import json
+import os
 
 intents = discord.Intents.all()
 
@@ -75,7 +76,7 @@ async def load_all_members():
             pass
 
 
-@tree.command(name="語音通知", description="🛠️ ▏開啟或關閉伺服器的語音通知功能")
+@tree.command(name="語音通知", description="開啟或關閉伺服器的語音通知功能")
 @app_commands.describe(action="選擇開啟或關閉")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.choices(action=[
@@ -202,36 +203,40 @@ def get_server_state(guild_id):
 
     return states.get(guild_id, "on")  # 如果沒有設定，預設為 "on"
 
-
-
-
-@tree.command(name="幫助", description="顯示該機器人的幫助介面")
+@tree.command(name="指令列表", description="顯示該機器人的指令列表介面")
 async def help_command(ctx):
     embed = discord.Embed(title="風暴機器人幫助介面", description="需要幫助嗎? 加入我們的 [Discord](https://discord.gg/daFQhVFGKj) 並開啟一個票單來與客服人員對談。", color=0x00bbff)
-    embed.add_field(name="一般的功能", value="""</幫助:1242821433306910921> 顯示這個機器人的指令列表
-                                                        </用戶查詢:1242821433306910929> 查詢使用者的帳號建立日期、加入日期和ID等
-                                                        </頭貼查詢:1242821433306910930> 查詢使用者的頭貼
-                                                        </伺服器資訊:1244212346117689424> 查詢伺服器的創建日期、人數、伺服器ID和擁有者ID等
-                                                        </身分組列表:1244212346117689425> 查詢這個伺服器的所有身分組
-                                                        </狀態:1243215849788145707> 查詢目前機器人的延遲、CPU和RAM使用率、擁有者ID等
-                                                        </邀請:1242821433529339969> 取得這個機器人的邀請連結
-                                                        """, inline=False)
-    embed.add_field(name="管理員的功能", value="""</踢出:1242821433306910922> 踢掉某人
-                                                        </停權:1242821433306910923> 停權某人
-                                                        </禁言:1242821433306910924> 禁言某人
-                                                        </鎖定:1242821433306910927> 禁止打字指定或當下的文字頻道
-                                                        </解除停權:1242821433306910926> 把某人的停權解除，注意這裡必須用用戶ID
-                                                        </解除禁言:1242821433306910925> 把某人的禁言給解除
-                                                        </解除鎖定:1242821433306910928> 把被鎖定的頻道給解除鎖定，讓大家能打字
-                                                        </清除頻道:1242821433529339966> 清除該頻道指定數量的內容
-                                                        </重建頻道:1242821433529339967> 把當下的文字頻道複製一份完整一樣的，然後把舊的刪除
-                                                        """, inline=False)
+    
+    embed.add_field(name="/用戶查詢", value="查詢用戶的帳號建立日期、加入日期和ID等", inline=True)
+    embed.add_field(name="/頭貼查詢", value="查詢使用者的Discord個人頭貼", inline=True)
+    embed.add_field(name="/伺服器資訊", value="查詢伺服器的創建日期、人數、伺服器ID和擁有者ID等", inline=True)
+    embed.add_field(name="/身分組列表", value=" 查詢這個伺服器的所有身分組", inline=True)
+    embed.add_field(name="/狀態", value="查詢目前機器人的延遲、CPU和RAM使用率、擁有者ID等", inline=True)
+    embed.add_field(name="/邀請", value="取得這個機器人的邀請連結", inline=True)
+    embed.add_field(name="/臨時語音 輸入密碼", value="輸入臨時語音頻道密碼", inline=True)
+    embed.add_field(name="= = = = = = = = = = = = = = = = 下列為僅管理員操作的功能 = = = = = = = = = = = = = = = =", value=" ", inline=False)
+    embed.add_field(name="/踢出", value="踢出指定用戶", inline=True)
+    embed.add_field(name="/停權", value="停權指定用戶", inline=True)
+    embed.add_field(name="/禁言", value="禁言指定用戶", inline=True)
+    embed.add_field(name="/鎖定", value="鎖定指定頻道的輸入權限", inline=True)
+    embed.add_field(name="/解除停權", value="解除停權指定用戶", inline=True)
+    embed.add_field(name="/解除禁言", value="解除禁言指定用戶", inline=True)
+    embed.add_field(name="/解除鎖定", value="解除鎖定指定頻道", inline=True)
+    embed.add_field(name="/重建頻道", value="刪除並重建指定頻道", inline=True)
+    embed.add_field(name="/臨時語音 建立", value="建立臨時語音通道", inline=True)
+    embed.add_field(name="/臨時語音 移除", value="移除臨時語音通道", inline=True)
+
+
+
+
+
+
     await ctx.response.send_message(embed=embed)
 
 
 
 
-@tree.command(name="踢出", description="🛠️ ▏將指定的成員從目前這個伺服器踢出")
+@tree.command(name="踢出", description="將指定的成員從目前這個伺服器踢出")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     user="選擇一個你要指定踢出的成員",
@@ -241,7 +246,7 @@ async def kick(ctx, user: discord.Member, *, reason: str = None):
         await user.kick(reason=reason)
         await ctx.response.send_message(f":white_check_mark: <@{user.id}> **已被踢出於本伺服器!**")
 
-@tree.command(name="停權", description="🛠️ ▏將指定的成員從目前這個伺服器停權")
+@tree.command(name="停權", description="將指定的成員從目前這個伺服器停權")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     user="選擇一個你要指定停權的成員",
@@ -251,7 +256,7 @@ async def kick(ctx, user: discord.Member, *, reason: str = None):
         await user.ban(reason=reason)
         await ctx.response.send_message(f":white_check_mark: <@{user.id}> **已被停權於本伺服器! :airplane:**")
 
-@tree.command(name='禁言', description='🛠️ ▏禁言指定的成員 (他將在指定時間內無法打字或語音，重新進入伺服器也一樣)')
+@tree.command(name='禁言', description='禁言指定的成員 (他將在指定時間內無法打字或語音，重新進入伺服器也一樣)')
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     user="選擇一個你要指定禁言的成員",
@@ -267,7 +272,7 @@ async def timeout(ctx, user: discord.Member, time: int = 60, reason: str = None)
     await user.edit(timed_out_until=discord.utils.utcnow() + duration_delta, reason=f"已被 {ctx.user.name} 禁言，直到 {duration_delta} 後! 原因: {reason}")
     await ctx.response.send_message(f":white_check_mark: <@{user.id}> **已被禁言於本伺服器!**")
 
-@tree.command(name='解除禁言', description='🛠️ ▏將已被禁言的成員解除禁言')
+@tree.command(name='解除禁言', description='將已被禁言的成員解除禁言')
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     user="選擇一個你要指定解除禁言的成員"
@@ -279,7 +284,7 @@ async def untimeout(ctx, user: discord.Member):
     await user.edit(timed_out_until=None)
     await ctx.response.send_message(f":white_check_mark: <@{user.id}> **已被解除禁言於本伺服器.**")
 
-@tree.command(name="解除停權", description="🛠️ ▏將已被停權的成員解除停權.")
+@tree.command(name="解除停權", description="將已被停權的成員解除停權.")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     imput="將被停權的成員ID貼在這裡"
@@ -288,7 +293,7 @@ async def unban(ctx, imput: discord.User):
     await ctx.guild.unban(user=imput)
     await ctx.response.send_message(f":white_check_mark: <@{imput.id}> **已被解除停權於本伺服器!**")
 
-@tree.command(name="鎖定", description="🛠️ ▏將指定的文字頻道文字輸入功能關閉使無權線的使用者無法打字")
+@tree.command(name="鎖定", description="將指定的文字頻道文字輸入功能關閉使無權線的使用者無法打字")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     channel="選擇一個要鎖定的文字頻道 (可以不填，預設為指令所輸入的那個頻道)"
@@ -308,7 +313,7 @@ async def lock(ctx, channel: discord.TextChannel = None):
     
     await ctx.response.send_message(f":lock: <#{channel.id}> **已被鎖定**")
 
-@tree.command(name="解除鎖定", description="🛠️ ▏將指定的文字頻道文字輸入功能開啟使無權線的使用者可以打字")
+@tree.command(name="解除鎖定", description="將指定的文字頻道文字輸入功能開啟使無權線的使用者可以打字")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.describe(
     channel="選擇一個要解除鎖定的文字頻道 (可以不填，預設為指令所輸入的那個頻道)"
@@ -354,22 +359,7 @@ async def user(ctx, user: discord.Member = None):
     embed.set_image(url=user.display_avatar)
     await ctx.response.send_message(embed=embed)
 
-
-@tree.command(name="清除頻道", description="🛠️ ▏清除文字頻道的字串")
-@app_commands.checks.has_permissions(administrator=True)
-@app_commands.describe(
-    number_of_message="輸入指定的清理數量 (不要太多，以免造成機器人API限速)"
-)
-async def clear(ctx, number_of_message: int):
-    await ctx.response.send_message(f":white_check_mark: **頻道清理中**")
-    
-    channel = ctx.channel
-
-    deleted = await channel.purge(limit=number_of_message+1)
-
-    await ctx.channel.send(f"```js\n{len(deleted)} 條訊息已被刪除```")
-
-@tree.command(name="重建頻道", description="🛠️ ▏將文字頻道重新建立並刪除舊的頻道")
+@tree.command(name="重建頻道", description="將文字頻道重新建立並刪除舊的頻道")
 @app_commands.checks.has_permissions(administrator=True)
 async def clear(ctx):
     if isinstance(ctx.channel, discord.TextChannel):
@@ -497,5 +487,198 @@ async def role_list(ctx):
 
     embed = discord.Embed(title=f"身分組列表", description=role_list_str, color=discord.Color.green())
     await ctx.response.send_message(embed=embed)
+
+class TempVoiceClient(discord.Client):
+    def __init__(self):
+        intents = discord.Intents.default()
+        intents.members = True
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+
+class 臨時語音(app_commands.Group):
+    ...
+temp_voice = 臨時語音(name="臨時語音")
+tree.add_command(temp_voice)
+
+class SetPasswordButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.primary, label="設定密碼", custom_id="set_password")
+
+    async def callback(self, interaction: discord.Interaction):
+        user = interaction.user
+        if not user.voice:
+            await interaction.response.send_message("你必須在一個語音頻道中才能設定密碼。", ephemeral=True)
+            return
+
+        guild = interaction.guild
+        file_path = f'temp_voice/{guild.id}.json'
+        
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        if user.voice.channel.id not in data['temp_channels']:
+            await interaction.response.send_message("你必須在你創建的臨時語音頻道中才能設定密碼。", ephemeral=True)
+            return
+
+        modal = PasswordModal(user.voice.channel)
+        await interaction.response.send_modal(modal)
+
+class PasswordModal(discord.ui.Modal):
+    def __init__(self, voice_channel):
+        super().__init__(title="設定語音頻道密碼")
+        self.voice_channel = voice_channel
+        self.password = discord.ui.TextInput(label="密碼", placeholder="輸入 'none' 表示無密碼", required=True)
+        self.add_item(self.password)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        file_path = f'temp_voice/{guild.id}.json'
+        
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        password = self.password.value.lower()
+        
+        if password == 'none':
+            if str(self.voice_channel.id) in data.get('passwords', {}):
+                del data['passwords'][str(self.voice_channel.id)]
+            await self.voice_channel.set_permissions(guild.default_role, connect=True)
+            await interaction.response.send_message("密碼已移除。", ephemeral=True)
+        else:
+            if 'passwords' not in data:
+                data['passwords'] = {}
+            data['passwords'][str(self.voice_channel.id)] = password
+            await self.voice_channel.set_permissions(guild.default_role, connect=False)
+            await self.voice_channel.set_permissions(interaction.user, connect=True)
+            await interaction.response.send_message("密碼已設定。", ephemeral=True)
+        
+        with open(file_path, 'w') as f:
+            json.dump(data, f)
+
+@temp_voice.command(name="建立", description="建立臨時語音通道")
+@app_commands.describe(
+    voice_channel="設定臨時語音的語音頻道",
+    text_channel="設定臨時語音面板位置"
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def create(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, text_channel: discord.TextChannel):
+    guild = interaction.guild
+    
+    if not os.path.exists('temp_voice'):
+        os.makedirs('temp_voice')
+    
+    file_path = f'temp_voice/{guild.id}.json'
+    data = {}
+    
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+    
+    category = await guild.create_category('臨時語音')
+    
+    data['voice_channel_id'] = voice_channel.id
+    data['text_channel_id'] = text_channel.id
+    data['category_id'] = category.id
+    data['temp_channels'] = []
+    
+    with open(file_path, 'w') as f:
+        json.dump(data, f)
+    
+    await voice_channel.edit(user_limit=1)
+    await text_channel.set_permissions(guild.default_role, send_messages=False)
+    
+    view = discord.ui.View()
+    view.add_item(SetPasswordButton())
+    await text_channel.send("點擊下方按鈕來設定語音頻道密碼：", view=view)
+    
+    await interaction.response.send_message("臨時語音系統已設置完成。", ephemeral=True)
+
+@temp_voice.command(name="輸入密碼", description="輸入臨時語音頻道設定的密碼")
+@app_commands.describe(
+    voice_channel="要加入的語音頻道",
+    password="頻道密碼"
+)
+async def 輸入臨時語音頻道密碼(interaction: discord.Interaction, voice_channel: discord.VoiceChannel, password: str):
+    guild = interaction.guild
+    file_path = f'temp_voice/{guild.id}.json'
+    
+    if not os.path.exists(file_path):
+        await interaction.response.send_message("臨時語音系統尚未設置。", ephemeral=True)
+        return
+    
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    
+    if str(voice_channel.id) not in data.get('passwords', {}):
+        await interaction.response.send_message("此頻道未設定密碼。", ephemeral=True)
+        return
+    
+    if data['passwords'][str(voice_channel.id)] == password:
+        await voice_channel.set_permissions(interaction.user, connect=True)
+        await interaction.response.send_message("密碼正確，你現在可以加入該語音頻道。", ephemeral=True)
+    else:
+        await interaction.response.send_message("密碼錯誤。", ephemeral=True)
+
+@client.event
+async def on_voice_state_update(member, before, after):
+    if before.channel == after.channel:
+        return
+
+    guild = member.guild
+    file_path = f'temp_voice/{guild.id}.json'
+    
+    if not os.path.exists(file_path):
+        return
+    
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    
+    if after.channel and after.channel.id == data['voice_channel_id']:
+        category = discord.utils.get(guild.categories, id=data['category_id'])
+        new_channel = await category.create_voice_channel(name=f"{member.name}的頻道")
+        
+        await member.move_to(new_channel)
+        
+        await new_channel.set_permissions(member, 
+            manage_channels=True,
+            manage_permissions=True,
+            manage_webhooks=True,
+            create_instant_invite=True,
+            connect=True,
+            speak=True,
+            stream=True,
+            use_voice_activation=True,
+            priority_speaker=True,
+            mute_members=True,
+            deafen_members=True,
+            move_members=True,
+            use_embedded_activities=True
+        )
+        
+        data['temp_channels'].append(new_channel.id)
+        with open(file_path, 'w') as f:
+            json.dump(data, f)
+    
+    if before.channel and before.channel.id in data['temp_channels']:
+        if len(before.channel.members) == 0:
+            await before.channel.delete()
+            data['temp_channels'].remove(before.channel.id)
+            if 'passwords' in data and str(before.channel.id) in data['passwords']:
+                del data['passwords'][str(before.channel.id)]
+            with open(file_path, 'w') as f:
+                json.dump(data, f)
+
+@temp_voice.command(name="移除", description="移除臨時語音通道")
+@app_commands.checks.has_permissions(administrator=True)
+async def 刪除臨時語音系統(interaction: discord.Interaction):
+    guild = interaction.guild
+    file_path = f'temp_voice/{guild.id}.json'
+    
+    if os.path.exists(file_path):
+        # 刪除 JSON 文件
+        os.remove(file_path)
+        await interaction.response.send_message("臨時語音系統設置已被移除。請注意，相關的頻道和分類並未被刪除。", ephemeral=True)
+    else:
+        await interaction.response.send_message("此伺服器沒有臨時語音系統的設置文件。", ephemeral=True)
         
 client.run("機器人Token貼這裡")
