@@ -620,7 +620,7 @@ async def 輸入臨時語音頻道密碼(interaction: discord.Interaction, voice
         await interaction.response.send_message("密碼錯誤。", ephemeral=True)
 
 @client.event
-async def on_voice_state_update(member, before, after):
+async def temp_on_voice_state_update(member, before, after):
     if before.channel == after.channel:
         return
 
