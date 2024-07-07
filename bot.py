@@ -196,7 +196,7 @@ async def user(ctx, user: discord.Member = None):
 async def avatar(interaction: discord.Interaction, user: discord.Member = None):
     if user is None:
         user = interaction.user
-    embed = discord.Embed(title=f"{user.name}的頭像", color=0x00ff00())
+    embed = discord.Embed(title=f"{user.name}的頭像", color=0x00ff00)
     embed.set_image(url=user.display_avatar.url)
     avatar_sizes = {
         "128x128": user.display_avatar.replace(size=128).url,
